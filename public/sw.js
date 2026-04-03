@@ -1,5 +1,5 @@
-const CACHE_NAME = "elo-jovem-v4";
-const HTML_CACHE = "elo-jovem-html-v2";
+const CACHE_NAME = "elo-jovem-v5";
+const HTML_CACHE = "elo-jovem-html-v3";
 const CACHE_PREFIX = "elo-jovem-";
 
 function isCacheableRequest(request) {

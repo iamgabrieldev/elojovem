@@ -1,7 +1,6 @@
 "use client";
 
-import { signOut } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase-client";
+import { firebaseSignOut } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
@@ -14,7 +13,7 @@ export function LogoutButton() {
       onClick={async () => {
         await fetch("/api/auth/session", { method: "DELETE" });
         try {
-          await signOut(getFirebaseAuth());
+          await firebaseSignOut();
         } catch {
           /* ignore */
         }

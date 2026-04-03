@@ -3,14 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  updateProfile,
-} from "firebase/auth";
 import { establishServerSession } from "@/lib/auth-client";
 import { messageForAuthFlowError } from "@/lib/firebase-auth-messages";
-import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase-client";
+import {
+  firebaseCreateUser,
+  firebaseUpdateProfile,
+  firebaseSignInWithGoogle,
+} from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StepIndicator } from "@/components/features/onboarding/step-indicator";
@@ -31,12 +30,10 @@ export default function RegistroPage() {
       .value;
     let step = "init";
     try {
-      step = "getAuth";
-      const auth = getFirebaseAuth();
-      step = "createUserWithEmailAndPassword";
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      step = "createUser";
+      const cred = await firebaseCreateUser(email, password);
       step = "updateProfile";
-      await updateProfile(cred.user, { displayName: name.trim() });
+      await firebaseUpdateProfile(cred.user, { displayName: name.trim() });
       step = "getIdToken";
       const idToken = await cred.user.getIdToken(true);
       step = "establishServerSession";
@@ -61,10 +58,8 @@ export default function RegistroPage() {
     setPending(true);
     let step = "init";
     try {
-      step = "getAuth";
-      const auth = getFirebaseAuth();
       step = "popup";
-      const cred = await signInWithPopup(auth, getGoogleProvider());
+      const cred = await firebaseSignInWithGoogle();
       step = "idToken";
       const idToken = await cred.user.getIdToken();
       step = "establishServerSession";

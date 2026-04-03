@@ -1,9 +1,19 @@
 "use client";
 
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import { initializeApp, getApps, type FirebaseApp } from "@firebase/app";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword as _signInWithEmailAndPassword,
+  signInWithPopup as _signInWithPopup,
+  createUserWithEmailAndPassword as _createUserWithEmailAndPassword,
+  updateProfile as _updateProfile,
+  signOut as _signOut,
+  type Auth,
+  type UserCredential,
+  type User,
+} from "@firebase/auth";
 
-/** Remove aspas extras e espaços comuns em .env mal formatado */
 function normalizePublicEnvValue(value: string | undefined): string {
   if (value == null) return "";
   let v = value.trim();
@@ -104,4 +114,33 @@ export function getFirebaseAuth(): Auth {
 
 export function getGoogleProvider() {
   return new GoogleAuthProvider();
+}
+
+export async function firebaseSignInWithEmail(
+  email: string,
+  password: string
+): Promise<UserCredential> {
+  return _signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+}
+
+export async function firebaseSignInWithGoogle(): Promise<UserCredential> {
+  return _signInWithPopup(getFirebaseAuth(), getGoogleProvider());
+}
+
+export async function firebaseCreateUser(
+  email: string,
+  password: string
+): Promise<UserCredential> {
+  return _createUserWithEmailAndPassword(getFirebaseAuth(), email, password);
+}
+
+export async function firebaseUpdateProfile(
+  user: User,
+  profile: { displayName?: string | null; photoURL?: string | null }
+): Promise<void> {
+  return _updateProfile(user, profile);
+}
+
+export async function firebaseSignOut(): Promise<void> {
+  return _signOut(getFirebaseAuth());
 }

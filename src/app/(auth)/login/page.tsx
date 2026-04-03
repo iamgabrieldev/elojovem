@@ -3,13 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  signInWithEmailAndPassword,
-  signInWithPopup,
-} from "firebase/auth";
 import { establishServerSession } from "@/lib/auth-client";
 import { messageForAuthFlowError } from "@/lib/firebase-auth-messages";
-import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase-client";
+import {
+  firebaseSignInWithEmail,
+  firebaseSignInWithGoogle,
+} from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -28,10 +27,8 @@ export default function LoginPage() {
       .value;
     let step = "init";
     try {
-      step = "getAuth";
-      const auth = getFirebaseAuth();
       step = "signIn";
-      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const cred = await firebaseSignInWithEmail(email, password);
       step = "idToken";
       const idToken = await cred.user.getIdToken();
       step = "establishServerSession";
@@ -53,10 +50,8 @@ export default function LoginPage() {
     setPending(true);
     let step = "init";
     try {
-      step = "getAuth";
-      const auth = getFirebaseAuth();
       step = "popup";
-      const cred = await signInWithPopup(auth, getGoogleProvider());
+      const cred = await firebaseSignInWithGoogle();
       step = "idToken";
       const idToken = await cred.user.getIdToken();
       step = "establishServerSession";

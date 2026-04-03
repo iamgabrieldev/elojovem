@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import {
+  getAdminAuth,
+  getAdminDb,
+  hasFirebaseAdminEnv,
+} from "@/lib/firebase-admin";
 import { SESSION_MAX_AGE_MS } from "@/lib/session";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
-
-function hasFirebaseAdminEnv(): boolean {
-  const pk = process.env.FIREBASE_PRIVATE_KEY?.trim();
-  const em = process.env.FIREBASE_CLIENT_EMAIL?.trim();
-  const pid =
-    process.env.FIREBASE_PROJECT_ID?.trim() ||
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
-  return Boolean(pk && em && pid);
-}
 
 type Body = {
   idToken?: string;

@@ -8,6 +8,7 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { establishServerSession } from "@/lib/auth-client";
+import { messageForAuthFlowError } from "@/lib/firebase-auth-messages";
 import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,15 +26,23 @@ export default function LoginPage() {
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement)
       .value;
+    let step = "init";
     try {
+      step = "getAuth";
       const auth = getFirebaseAuth();
+      step = "signIn";
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      step = "idToken";
       const idToken = await cred.user.getIdToken();
+      step = "establishServerSession";
       await establishServerSession(idToken);
       router.push("/dashboard");
       router.refresh();
-    } catch {
-      setError("Email ou senha incorretos.");
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[login]", step, err);
+      }
+      setError(messageForAuthFlowError(err, { step }));
     } finally {
       setPending(false);
     }
@@ -42,15 +51,23 @@ export default function LoginPage() {
   async function onGoogle() {
     setError(null);
     setPending(true);
+    let step = "init";
     try {
+      step = "getAuth";
       const auth = getFirebaseAuth();
+      step = "popup";
       const cred = await signInWithPopup(auth, getGoogleProvider());
+      step = "idToken";
       const idToken = await cred.user.getIdToken();
+      step = "establishServerSession";
       await establishServerSession(idToken);
       router.push("/dashboard");
       router.refresh();
-    } catch {
-      setError("Não foi possível entrar com o Google.");
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[login:google]", step, err);
+      }
+      setError(messageForAuthFlowError(err, { step }));
     } finally {
       setPending(false);
     }

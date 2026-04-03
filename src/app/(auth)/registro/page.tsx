@@ -9,6 +9,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { establishServerSession } from "@/lib/auth-client";
+import { messageForAuthFlowError } from "@/lib/firebase-auth-messages";
 import { getFirebaseAuth, getGoogleProvider } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ export default function RegistroPage() {
       .value;
     let step = "init";
     try {
+      step = "getAuth";
       const auth = getFirebaseAuth();
       step = "createUserWithEmailAndPassword";
       const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -44,29 +46,11 @@ export default function RegistroPage() {
       });
       router.push("/registro/pagamento");
       router.refresh();
-    } catch (err: unknown) {
-      const code =
-        err && typeof err === "object" && "code" in err
-          ? String((err as { code?: string }).code)
-          : "";
-      const errMsg =
-        err instanceof Error ? err.message.slice(0, 120) : String(err).slice(0, 120);
-      const authMessages: Record<string, string> = {
-        "auth/email-already-in-use": "Este email já está cadastrado.",
-        "auth/weak-password": "Senha fraca. Use pelo menos 6 caracteres.",
-        "auth/invalid-email": "Email inválido.",
-        "auth/operation-not-allowed":
-          "Email/senha não está ativo no Firebase. Ative o método no console.",
-        "auth/network-request-failed":
-          "Sem rede ou Firebase indisponível. Tente de novo.",
-      };
-      if (code && authMessages[code]) {
-        setError(authMessages[code]);
-      } else if (step === "establishServerSession" && errMsg) {
-        setError(errMsg.slice(0, 200));
-      } else {
-        setError("Não foi possível criar a conta. Tente novamente.");
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[registro]", step, err);
       }
+      setError(messageForAuthFlowError(err, { step }));
     } finally {
       setPending(false);
     }
@@ -75,15 +59,23 @@ export default function RegistroPage() {
   async function onGoogle() {
     setError(null);
     setPending(true);
+    let step = "init";
     try {
+      step = "getAuth";
       const auth = getFirebaseAuth();
+      step = "popup";
       const cred = await signInWithPopup(auth, getGoogleProvider());
+      step = "idToken";
       const idToken = await cred.user.getIdToken();
+      step = "establishServerSession";
       await establishServerSession(idToken);
       router.push("/dashboard");
       router.refresh();
-    } catch {
-      setError("Não foi possível entrar com o Google.");
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[registro:google]", step, err);
+      }
+      setError(messageForAuthFlowError(err, { step }));
     } finally {
       setPending(false);
     }

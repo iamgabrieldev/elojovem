@@ -1,0 +1,4 @@
+# Dados da aplicação estão no Firebase (Firestore + Auth).
+# Este ficheiro fica vazio intencionalmente; use o Firebase Emulator Suite se precisar de ambiente local.
+
+services: {}

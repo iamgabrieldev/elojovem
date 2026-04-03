@@ -1,0 +1,28 @@
+{
+  "name": "Elo Jovem",
+  "short_name": "Elo Jovem",
+  "description": "Plataforma espiritual para jovens cristãos — hábitos, devocionais e mentor IA.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#d97706",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

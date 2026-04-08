@@ -1,5 +1,5 @@
-const CACHE_NAME = "elo-jovem-v5";
-const HTML_CACHE = "elo-jovem-html-v3";
+const CACHE_NAME = "elo-jovem-v7";
+const HTML_CACHE = "elo-jovem-html-v5";
 const CACHE_PREFIX = "elo-jovem-";
 
 function isCacheableRequest(request) {
@@ -8,12 +8,11 @@ function isCacheableRequest(request) {
   if (url.origin !== self.location.origin) return false;
   const p = url.pathname;
   return (
-    p.startsWith("/_next/static/") ||
     p.startsWith("/_next/image") ||
     p.startsWith("/icons/") ||
     p === "/manifest.webmanifest" ||
     p === "/sw.js" ||
-    /\.(js|css|woff2?|png|ico|webp|svg)$/i.test(p)
+    /\.(woff2?|png|ico|webp|svg)$/i.test(p)
   );
 }
 

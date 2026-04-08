@@ -19,9 +19,11 @@ function formatCountdown(expiresAt?: string) {
 
 type Props = {
   onPaid?: () => void;
+  /** Plano cujo valor será usado no QR Code (após salvar CPF/celular). */
+  planId: "MONTHLY" | "ANNUAL";
 };
 
-export function PixInlineCheckout({ onPaid }: Props) {
+export function PixInlineCheckout({ onPaid, planId }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [qr, setQr] = useState<{
@@ -43,7 +45,7 @@ export function PixInlineCheckout({ onPaid }: Props) {
   const create = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const r = await createRegistrationPixQrCodeAction();
+    const r = await createRegistrationPixQrCodeAction(planId);
     if (!r.ok) {
       setLoading(false);
       setError(r.error);
@@ -52,7 +54,7 @@ export function PixInlineCheckout({ onPaid }: Props) {
     setQr(r.qr);
     setStatus("PENDING");
     setLoading(false);
-  }, []);
+  }, [planId]);
 
   const copy = useCallback(async () => {
     if (!qr) return;

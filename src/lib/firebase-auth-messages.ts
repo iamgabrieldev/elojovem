@@ -16,6 +16,8 @@ const AUTH_CODE_MESSAGES: Record<string, string> = {
   "auth/popup-closed-by-user": "Login cancelado (popup fechado).",
   "auth/cancelled-popup-request": "Só uma janela de login por vez. Feche a outra e tente de novo.",
   "auth/popup-blocked": "Popup bloqueado pelo navegador. Permita popups para este site.",
+  "auth/internal-error":
+    "Login com Google falhou (erro interno). No Firebase Console: ative o provedor Google, adicione domínios autorizados (ex.: localhost e elojovem.com.br) e verifique se as APIs Identity Toolkit estão ativas.",
 };
 
 export function messageForAuthFlowError(

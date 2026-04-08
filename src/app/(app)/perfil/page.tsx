@@ -3,11 +3,17 @@ import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LogoutButton } from "@/components/features/dashboard/logout-button";
+import { AdminPaymentToggle } from "@/components/features/profile/admin-payment-toggle";
 import { UserAvatar } from "@/components/features/profile/user-avatar";
 import { ThemeToggle } from "@/components/features/profile/theme-toggle";
 import Link from "next/link";
 import { MessageCircle, Heart } from "lucide-react";
-import { getUserProfile } from "@/lib/firestore/repos";
+import { getAppSettings, getUserProfile } from "@/lib/firestore/repos";
+import {
+  formatBrlFromCents,
+  getAnnualPlan,
+  getMonthlyPlan,
+} from "@/lib/plans";
 
 export default async function PerfilPage() {
   const session = await auth();
@@ -15,6 +21,7 @@ export default async function PerfilPage() {
 
   const user = await getUserProfile(session.user.id);
   if (!user) redirect("/login");
+  const settings = user.isAdmin ? await getAppSettings() : null;
 
   const goalLabels: Record<string, string> = {
     ANXIETY: "Ansiedade",
@@ -79,6 +86,16 @@ export default async function PerfilPage() {
             )}
           </div>
         </div>
+        {user.subscriptionPlan ? (
+          <div>
+            <p className="text-sm text-slate-500">Plano</p>
+            <p className="font-medium text-slate-900 mt-1">
+              {user.subscriptionPlan === "MONTHLY"
+                ? `Mensal — ${formatBrlFromCents(getMonthlyPlan().priceCents)}/mês`
+                : `Anual — ${getAnnualPlan().priceHint} (total ${formatBrlFromCents(getAnnualPlan().priceCents)})`}
+            </p>
+          </div>
+        ) : null}
         <div>
           <p className="text-sm text-slate-500">Tempo diário sugerido</p>
           <p className="font-medium text-slate-900">
@@ -102,6 +119,29 @@ export default async function PerfilPage() {
       <Card className="flex flex-col gap-4">
         <ThemeToggle />
       </Card>
+
+      {user.isAdmin && settings ? (
+        <Card className="flex flex-col gap-4 border-violet-200 bg-gradient-to-b from-violet-50/70 to-white">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">
+              Painel Admin
+            </p>
+            <h2 className="mt-1 text-sm font-semibold text-slate-900">
+              Controle rápido do lançamento
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Sua conta está marcada como administradora e pode controlar a flag
+              global de pagamento.
+            </p>
+          </div>
+          <AdminPaymentToggle
+            initialEnabled={settings.registrationPaymentEnabled}
+          />
+          <p className="text-xs text-slate-500">
+            Admin reconhecido automaticamente para `jonas@email.com`.
+          </p>
+        </Card>
+      ) : null}
 
       <LogoutButton />
     </div>

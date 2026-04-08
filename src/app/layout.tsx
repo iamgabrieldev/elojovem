@@ -49,7 +49,29 @@ export default function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js');
+                  if (${JSON.stringify(process.env.NODE_ENV)} === 'production') {
+                    navigator.serviceWorker.register('/sw.js').then((registration) => {
+                      registration.update().catch(() => {});
+                    }).catch(() => {});
+                  } else {
+                    navigator.serviceWorker.getRegistrations()
+                      .then((registrations) =>
+                        Promise.all(registrations.map((registration) => registration.unregister()))
+                      )
+                      .catch(() => {});
+
+                    if ('caches' in window) {
+                      caches.keys()
+                        .then((keys) =>
+                          Promise.all(
+                            keys
+                              .filter((key) => key.startsWith('elo-jovem-'))
+                              .map((key) => caches.delete(key))
+                          )
+                        )
+                        .catch(() => {});
+                    }
+                  }
                 });
               }
             `,

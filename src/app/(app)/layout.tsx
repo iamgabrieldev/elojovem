@@ -19,7 +19,7 @@ export default async function AppLayout({
   if (!user) {
     redirect("/login");
   }
-  assertRegistrationPaymentDone(user);
+  await assertRegistrationPaymentDone(user);
 
   return (
     <div className="flex min-h-screen flex-col bg-[hsl(var(--bg))] pb-20">

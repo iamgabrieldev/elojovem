@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { toggleHabit } from "@/modules/habit/actions";
 import type { HabitType } from "@/lib/types/domain";
@@ -22,17 +23,14 @@ export function HabitChecklist({ completed }: HabitChecklistProps) {
       <div className="flex flex-col gap-2">
         {habits.map(({ type, label, emoji }) => {
           const done = completed.includes(type);
-          return (
-            <button
-              key={type}
-              onClick={() => toggleHabit(type)}
-              className={cn(
-                "flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all active:scale-[0.98]",
-                done
-                  ? "border-emerald-200 bg-emerald-50"
-                  : "border-slate-100 bg-white hover:border-slate-200"
-              )}
-            >
+          const rowClass = cn(
+            "flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all active:scale-[0.98]",
+            done
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-slate-100 bg-white hover:border-slate-200"
+          );
+          const inner = (
+            <>
               <span className="text-lg">{emoji}</span>
               <span
                 className={cn(
@@ -56,6 +54,35 @@ export function HabitChecklist({ completed }: HabitChecklistProps) {
                   </svg>
                 )}
               </div>
+            </>
+          );
+          if (type === "BIBLE_READING") {
+            return (
+              <div key={type} className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => toggleHabit(type)}
+                  className={rowClass}
+                >
+                  {inner}
+                </button>
+                <Link
+                  href="/biblia"
+                  className="text-center text-xs font-medium text-amber-700 hover:underline"
+                >
+                  Abrir Bíblia online
+                </Link>
+              </div>
+            );
+          }
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => toggleHabit(type)}
+              className={rowClass}
+            >
+              {inner}
             </button>
           );
         })}

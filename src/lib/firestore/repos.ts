@@ -3,15 +3,20 @@ import {
   Timestamp,
   type DocumentData,
 } from "firebase-admin/firestore";
+import { isAdminEmail } from "../admin";
 import { getAdminDb } from "../firebase-admin";
 import type {
+  AppSettings,
   ChatMessageRecord,
+  CommunityCommentRecord,
+  CommunityPostRecord,
   DevotionalRecord,
   DevotionalSource,
   GoalType,
   HabitType,
   PrayerRecord,
   ReflectionRecord,
+  SubscriptionPlanId,
   Tradition,
   UserProfile,
 } from "../types/domain";
@@ -23,6 +28,10 @@ export function dateKey(d: Date): string {
 export function devotionalDocId(tradition: Tradition, date: Date): string {
   return `${tradition}_${dateKey(date)}`;
 }
+
+const DEFAULT_APP_SETTINGS: AppSettings = {
+  registrationPaymentEnabled: true,
+};
 
 export function tsToDate(v: unknown): Date {
   if (v instanceof Timestamp) return v.toDate();
@@ -52,29 +61,97 @@ export function devotionalFromDoc(
   };
 }
 
+function communityPostFromDoc(id: string, d: DocumentData): CommunityPostRecord {
+  return {
+    id,
+    userId: String(d.userId ?? ""),
+    authorName: String(d.authorName ?? "Membro da comunidade"),
+    authorImage: d.authorImage ?? null,
+    content: String(d.content ?? ""),
+    likeCount: Number(d.likeCount ?? 0),
+    commentCount: Number(d.commentCount ?? 0),
+    likedBy: Array.isArray(d.likedBy)
+      ? d.likedBy.map((value: unknown) => String(value))
+      : [],
+    createdAt: tsToDate(d.createdAt),
+  };
+}
+
+function communityCommentFromDoc(
+  postId: string,
+  id: string,
+  d: DocumentData
+): CommunityCommentRecord {
+  return {
+    id,
+    postId,
+    userId: String(d.userId ?? ""),
+    authorName: String(d.authorName ?? "Membro da comunidade"),
+    authorImage: d.authorImage ?? null,
+    content: String(d.content ?? ""),
+    createdAt: tsToDate(d.createdAt),
+  };
+}
+
 export async function getUserProfile(
   uid: string
 ): Promise<UserProfile | null> {
   const snap = await getAdminDb().collection("users").doc(uid).get();
   if (!snap.exists) return null;
   const d = snap.data()!;
+  const email = String(d.email ?? "");
   return {
     id: uid,
-    email: String(d.email ?? ""),
+    email,
     name: d.name ?? null,
     image: d.image ?? null,
+    isAdmin: Boolean(d.isAdmin) || isAdminEmail(email),
     tradition: (d.tradition as Tradition) ?? null,
     dailyTime: typeof d.dailyTime === "number" ? d.dailyTime : 10,
     goals: Array.isArray(d.goals) ? (d.goals as GoalType[]) : [],
     onboardingCompleted: Boolean(d.onboardingCompleted),
     requiresPaymentCompletion: Boolean(d.requiresPaymentCompletion),
     paymentCompleted: Boolean(d.paymentCompleted),
+    subscriptionPlan:
+      d.subscriptionPlan === "MONTHLY" || d.subscriptionPlan === "ANNUAL"
+        ? (d.subscriptionPlan as SubscriptionPlanId)
+        : null,
     abacateBillingId: d.abacateBillingId ?? null,
     cellphone: d.cellphone ?? null,
     taxId: d.taxId ?? null,
     createdAt: tsToDate(d.createdAt),
     updatedAt: tsToDate(d.updatedAt),
   };
+}
+
+export async function getAppSettings(): Promise<AppSettings> {
+  const snap = await getAdminDb().collection("appSettings").doc("global").get();
+  if (!snap.exists) {
+    return DEFAULT_APP_SETTINGS;
+  }
+
+  const d = snap.data()!;
+  return {
+    registrationPaymentEnabled:
+      typeof d.registrationPaymentEnabled === "boolean"
+        ? d.registrationPaymentEnabled
+        : DEFAULT_APP_SETTINGS.registrationPaymentEnabled,
+  };
+}
+
+export async function updateAppSettings(
+  data: Partial<AppSettings>
+): Promise<void> {
+  await getAdminDb()
+    .collection("appSettings")
+    .doc("global")
+    .set(
+      {
+        ...data,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 }
 
 export async function updateUser(
@@ -429,4 +506,108 @@ export async function findUsersByBillingId(
 
 export async function markPaymentCompleted(uid: string): Promise<void> {
   await updateUser(uid, { paymentCompleted: true });
+}
+
+export async function createCommunityPost(
+  uid: string,
+  authorName: string,
+  authorImage: string | null,
+  content: string
+): Promise<void> {
+  await getAdminDb().collection("communityPosts").add({
+    userId: uid,
+    authorName,
+    authorImage,
+    content,
+    likeCount: 0,
+    commentCount: 0,
+    likedBy: [],
+    createdAt: FieldValue.serverTimestamp(),
+  });
+}
+
+export async function listCommunityPosts(
+  limitCount = 20
+): Promise<CommunityPostRecord[]> {
+  const snap = await getAdminDb()
+    .collection("communityPosts")
+    .orderBy("createdAt", "desc")
+    .limit(limitCount)
+    .get();
+
+  return snap.docs.map((doc) => communityPostFromDoc(doc.id, doc.data()));
+}
+
+export async function toggleCommunityPostLike(
+  postId: string,
+  uid: string
+): Promise<void> {
+  const ref = getAdminDb().collection("communityPosts").doc(postId);
+
+  await getAdminDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      throw new Error("Publicacao nao encontrada.");
+    }
+
+    const data = snap.data()!;
+    const likedBy = Array.isArray(data.likedBy)
+      ? data.likedBy.map((value: unknown) => String(value))
+      : [];
+    const alreadyLiked = likedBy.includes(uid);
+
+    tx.update(ref, {
+      likedBy: alreadyLiked
+        ? FieldValue.arrayRemove(uid)
+        : FieldValue.arrayUnion(uid),
+      likeCount: Math.max(0, Number(data.likeCount ?? 0) + (alreadyLiked ? -1 : 1)),
+    });
+  });
+}
+
+export async function addCommunityComment(
+  postId: string,
+  uid: string,
+  authorName: string,
+  authorImage: string | null,
+  content: string
+): Promise<void> {
+  const postRef = getAdminDb().collection("communityPosts").doc(postId);
+  const commentRef = postRef.collection("comments").doc();
+
+  await getAdminDb().runTransaction(async (tx) => {
+    const postSnap = await tx.get(postRef);
+    if (!postSnap.exists) {
+      throw new Error("Publicacao nao encontrada.");
+    }
+
+    tx.set(commentRef, {
+      userId: uid,
+      authorName,
+      authorImage,
+      content,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    tx.update(postRef, {
+      commentCount: Number(postSnap.data()?.commentCount ?? 0) + 1,
+    });
+  });
+}
+
+export async function listCommunityComments(
+  postId: string,
+  limitCount = 20
+): Promise<CommunityCommentRecord[]> {
+  const snap = await getAdminDb()
+    .collection("communityPosts")
+    .doc(postId)
+    .collection("comments")
+    .orderBy("createdAt", "asc")
+    .limit(limitCount)
+    .get();
+
+  return snap.docs.map((doc) =>
+    communityCommentFromDoc(postId, doc.id, doc.data())
+  );
 }

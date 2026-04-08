@@ -37,11 +37,13 @@ export default function RegistroPage() {
       step = "getIdToken";
       const idToken = await cred.user.getIdToken(true);
       step = "establishServerSession";
-      await establishServerSession(idToken, {
+      const session = await establishServerSession(idToken, {
         registrationKind: "paid-email",
         name: name.trim(),
       });
-      router.push("/registro/pagamento");
+      router.push(
+        session.requiresPaymentCompletion ? "/registro/pagamento" : "/tradicao"
+      );
       router.refresh();
     } catch (err) {
       if (process.env.NODE_ENV === "development") {

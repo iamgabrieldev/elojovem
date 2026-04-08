@@ -10,7 +10,13 @@ import {
   listBillings,
   type AbacatePaymentMethod,
 } from "@/lib/abacatepay";
-import { getUserProfile, updateUser } from "@/lib/firestore/repos";
+import { getPlan } from "@/lib/plans";
+import {
+  getAppSettings,
+  getUserProfile,
+  updateUser,
+} from "@/lib/firestore/repos";
+import type { SubscriptionPlanId } from "@/lib/types/domain";
 
 const digits = (s: string) => s.replace(/\D/g, "");
 
@@ -25,11 +31,14 @@ const checkoutSchema = z.object({
     .min(11, "CPF inválido")
     .transform((v) => digits(v))
     .refine((v) => v.length === 11, "CPF deve ter 11 dígitos"),
+  plan: z.enum(["MONTHLY", "ANNUAL"]),
 });
 
 export type CheckoutState = {
   error?: string;
   checkoutUrl?: string;
+  /** Dados salvos com sucesso antes de gerar Pix */
+  savedForPix?: boolean;
   pixQrCode?: {
     id: string;
     brCode: string;
@@ -38,23 +47,8 @@ export type CheckoutState = {
   };
 };
 
-function productConfig() {
-  const price = Number(process.env.ABACATEPAY_PRODUCT_PRICE_CENTS ?? "2900");
-  const safePrice = Number.isFinite(price) && price >= 100 ? price : 2900;
-  return {
-    externalId:
-      process.env.ABACATEPAY_PRODUCT_EXTERNAL_ID?.trim() || "elojovem-acesso",
-    name:
-      process.env.ABACATEPAY_PRODUCT_NAME?.trim() || "Acesso Elo Jovem",
-    description:
-      process.env.ABACATEPAY_PRODUCT_DESCRIPTION?.trim() ||
-      "Acesso ao app e conteúdos personalizados.",
-    price: safePrice,
-  };
-}
-
 function getEnabledMethods(): AbacatePaymentMethod[] {
-  const raw = process.env.ABACATEPAY_PAYMENT_METHODS ?? "PIX";
+  const raw = process.env.ABACATEPAY_PAYMENT_METHODS ?? "PIX,CARD";
   const methods = raw
     .split(",")
     .map((m) => m.trim().toUpperCase())
@@ -72,9 +66,17 @@ export async function createRegistrationCheckoutAction(
   }
 
   const user = await getUserProfile(session.user.id);
+  const settings = await getAppSettings();
 
   if (!user) {
     return { error: "Usuário não encontrado." };
+  }
+
+  if (!settings.registrationPaymentEnabled) {
+    return {
+      error:
+        "O pagamento no cadastro está desativado no momento. Use o acesso gratuito desta campanha.",
+    };
   }
 
   if (!user.requiresPaymentCompletion) {
@@ -88,28 +90,33 @@ export async function createRegistrationCheckoutAction(
   const parsed = checkoutSchema.safeParse({
     cellphone: formData.get("cellphone"),
     taxId: formData.get("taxId"),
+    plan: formData.get("plan"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  const { cellphone, taxId } = parsed.data;
+  const { cellphone, taxId, plan: planField } = parsed.data;
+  const plan = getPlan(planField);
+  if (!plan) {
+    return { error: "Plano inválido." };
+  }
+
   const appUrl = getAppUrl();
-  const product = productConfig();
   const methods = getEnabledMethods();
 
   try {
     const billing = await createBilling({
-      frequency: "ONE_TIME",
+      frequency: plan.frequency,
       methods,
       products: [
         {
-          externalId: product.externalId,
-          name: product.name,
-          description: product.description,
+          externalId: plan.externalId,
+          name: plan.name,
+          description: plan.description,
           quantity: 1,
-          price: product.price,
+          price: plan.priceCents,
         },
       ],
       returnUrl: `${appUrl}/registro/pagamento`,
@@ -121,13 +128,18 @@ export async function createRegistrationCheckoutAction(
         taxId,
       },
       externalId: user.id,
-      metadata: { userId: user.id },
+      metadata: {
+        userId: user.id,
+        planId: plan.id,
+        planLabel: plan.label,
+      },
     });
 
     await updateUser(user.id, {
       cellphone,
       taxId,
       abacateBillingId: billing.id,
+      subscriptionPlan: plan.id as SubscriptionPlanId,
     });
 
     return { checkoutUrl: billing.url };
@@ -137,7 +149,11 @@ export async function createRegistrationCheckoutAction(
   }
 }
 
-export async function createRegistrationPixQrCodeAction(): Promise<
+const planOnlySchema = z.enum(["MONTHLY", "ANNUAL"]);
+
+export async function createRegistrationPixQrCodeAction(
+  planIdRaw: string
+): Promise<
   | {
       ok: true;
       qr: {
@@ -155,7 +171,14 @@ export async function createRegistrationPixQrCodeAction(): Promise<
   }
 
   const user = await getUserProfile(session.user.id);
+  const settings = await getAppSettings();
   if (!user) return { ok: false, error: "Usuário não encontrado." };
+  if (!settings.registrationPaymentEnabled) {
+    return {
+      ok: false,
+      error: "O pagamento no cadastro está temporariamente desativado.",
+    };
+  }
   if (!user.requiresPaymentCompletion) {
     return { ok: false, error: "Nenhum pagamento pendente para esta conta." };
   }
@@ -171,23 +194,34 @@ export async function createRegistrationPixQrCodeAction(): Promise<
     };
   }
 
-  const product = productConfig();
+  const parsedPlan = planOnlySchema.safeParse(planIdRaw);
+  const plan = getPlan(parsedPlan.success ? parsedPlan.data : null);
+  if (!plan) {
+    return { ok: false, error: "Selecione um plano válido antes do Pix." };
+  }
 
   try {
     const qr = await createPixQrCode({
-      amount: product.price,
+      amount: plan.priceCents,
       expiresIn: 60 * 30,
-      description: (product.name ?? "Pagamento").slice(0, 37),
+      description: (plan.name ?? "Pagamento").slice(0, 37),
       customer: {
         name: user.name ?? "Cliente",
         cellphone: user.cellphone,
         email: user.email,
         taxId: user.taxId,
       },
-      metadata: { userId: user.id, kind: "registration" },
+      metadata: {
+        userId: user.id,
+        kind: "registration",
+        planId: plan.id,
+      },
     });
 
-    await updateUser(user.id, { abacateBillingId: qr.id });
+    await updateUser(user.id, {
+      abacateBillingId: qr.id,
+      subscriptionPlan: plan.id as SubscriptionPlanId,
+    });
 
     return {
       ok: true,
@@ -283,4 +317,51 @@ export async function syncRegistrationPaymentFromAbacateAction(): Promise<{
   }
 
   return { paid: false };
+}
+
+/** Salva plano escolhido antes de gerar Pix (após preencher CPF/celular). */
+export async function saveRegistrationPlanAndCustomerAction(
+  _prev: CheckoutState,
+  formData: FormData
+): Promise<CheckoutState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Faça login para continuar." };
+  }
+
+  const user = await getUserProfile(session.user.id);
+  const settings = await getAppSettings();
+  if (!settings.registrationPaymentEnabled) {
+    return { error: "O pagamento no cadastro está temporariamente desativado." };
+  }
+  if (!user?.requiresPaymentCompletion || user.paymentCompleted) {
+    return { error: "Nenhum pagamento pendente." };
+  }
+
+  const parsed = checkoutSchema.safeParse({
+    cellphone: formData.get("cellphone"),
+    taxId: formData.get("taxId"),
+    plan: formData.get("plan"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+  }
+
+  const { cellphone, taxId, plan: planField } = parsed.data;
+  const plan = getPlan(planField);
+  if (!plan) return { error: "Plano inválido." };
+
+  try {
+    await updateUser(session.user.id, {
+      cellphone,
+      taxId,
+      subscriptionPlan: plan.id as SubscriptionPlanId,
+    });
+    return { savedForPix: true };
+  } catch (e: unknown) {
+    return {
+      error: e instanceof Error ? e.message : "Falha ao salvar dados.",
+    };
+  }
 }

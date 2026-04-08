@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Configuração
+
+- Copie `.env.example` para `.env` e preencha Firebase, AbacatePay e URLs públicas.
+- **Produção:** defina `NEXT_PUBLIC_APP_URL=https://elojovem.com.br` (ou o domínio canônico) para redirects corretos após o checkout AbacatePay e OAuth.
+- Login com Google: veja [docs/FIREBASE_GOOGLE_SETUP.md](docs/FIREBASE_GOOGLE_SETUP.md).
+
 ## Getting Started
 
 First, run the development server:

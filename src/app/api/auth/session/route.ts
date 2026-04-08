@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
+import { isAdminEmail } from "@/lib/admin";
 import {
   getAdminAuth,
   getAdminDb,
   hasFirebaseAdminEnv,
 } from "@/lib/firebase-admin";
+import { getAppSettings } from "@/lib/firestore/repos";
 import { SESSION_MAX_AGE_MS } from "@/lib/session";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
@@ -55,24 +57,29 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     const userRef = db.collection("users").doc(uid);
     const existing = await userRef.get();
+    const email = decoded.email ?? "";
+    const isAdmin = isAdminEmail(email);
+    const settings = await getAppSettings();
 
     if (!existing.exists) {
       const base = {
-        email: decoded.email ?? "",
+        email,
         name: body.name?.trim() || decoded.name || null,
         image: decoded.picture ?? null,
+        isAdmin,
         tradition: null,
         dailyTime: 10,
         goals: [] as string[],
         onboardingCompleted: false,
         abacateBillingId: null,
+        subscriptionPlan: null,
         cellphone: null,
         taxId: null,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
 
-      if (body.registrationKind === "paid-email") {
+      if (body.registrationKind === "paid-email" && settings.registrationPaymentEnabled) {
         await userRef.set({
           ...base,
           requiresPaymentCompletion: true,
@@ -85,13 +92,41 @@ export async function POST(request: Request) {
           paymentCompleted: true,
         });
       }
+    } else {
+      const current = existing.data() ?? {};
+      const updates: Record<string, unknown> = {};
+
+      if (current.email !== email && email) updates.email = email;
+      if (current.isAdmin !== isAdmin) updates.isAdmin = isAdmin;
+
+      if (
+        body.registrationKind === "paid-email" &&
+        settings.registrationPaymentEnabled === false &&
+        current.requiresPaymentCompletion === true &&
+        current.paymentCompleted !== true
+      ) {
+        updates.requiresPaymentCompletion = false;
+        updates.paymentCompleted = true;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await userRef.update({
+          ...updates,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
     }
 
     const sessionCookie = await auth.createSessionCookie(idToken, {
       expiresIn: SESSION_MAX_AGE_MS,
     });
 
-    const res = NextResponse.json({ ok: true });
+    const profileSnap = await userRef.get();
+    const requiresPaymentCompletion = Boolean(
+      profileSnap.data()?.requiresPaymentCompletion
+    );
+
+    const res = NextResponse.json({ ok: true, requiresPaymentCompletion });
     res.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

@@ -17,7 +17,7 @@ export default async function OnboardingLayout({
   if (!user) {
     redirect("/login");
   }
-  assertRegistrationPaymentDone(user);
+  await assertRegistrationPaymentDone(user);
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-amber-50 to-white px-6 py-10">

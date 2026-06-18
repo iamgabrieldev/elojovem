@@ -15,10 +15,33 @@ const AUTH_CODE_MESSAGES: Record<string, string> = {
     "Sem rede ou Firebase indisponível. Tente de novo.",
   "auth/popup-closed-by-user": "Login cancelado (popup fechado).",
   "auth/cancelled-popup-request": "Só uma janela de login por vez. Feche a outra e tente de novo.",
-  "auth/popup-blocked": "Popup bloqueado pelo navegador. Permita popups para este site.",
+  "auth/popup-blocked":
+    "Popup bloqueado pelo navegador. Permita popups para este site ou use o login por redirecionamento.",
+  "auth/unauthorized-domain":
+    "Este domínio não está autorizado no Firebase. Adicione-o em Authentication → Settings → Authorized domains.",
   "auth/internal-error":
     "Login com Google falhou (erro interno). No Firebase Console: ative o provedor Google, adicione domínios autorizados (ex.: localhost e elojovem.com.br) e verifique se as APIs Identity Toolkit estão ativas.",
 };
+
+const FIREBASE_PROJECT_ID =
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() || "elojovem-481ca";
+
+export function firebaseConsoleGoogleUrl(): string {
+  return `https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}/authentication/providers`;
+}
+
+/** Códigos que indicam problema de configuração no Firebase Console. */
+export function isFirebaseConsoleSetupError(err: unknown): boolean {
+  const code =
+    err && typeof err === "object" && "code" in err
+      ? String((err as { code?: string }).code)
+      : "";
+  return (
+    code === "auth/internal-error" ||
+    code === "auth/operation-not-allowed" ||
+    code === "auth/unauthorized-domain"
+  );
+}
 
 export function messageForAuthFlowError(
   err: unknown,
@@ -39,6 +62,10 @@ export function messageForAuthFlowError(
       "Servidor sem Firebase Admin configurado. " +
       "Defina FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY e o projeto no .env."
     );
+  }
+
+  if (msg === "REDIRECT_IN_PROGRESS") {
+    return "Redirecionando para o Google…";
   }
 
   if (step === "establishServerSession" && msg.includes("Token inválido")) {

@@ -6,6 +6,8 @@ import {
   GoogleAuthProvider,
   signInWithEmailAndPassword as _signInWithEmailAndPassword,
   signInWithPopup as _signInWithPopup,
+  signInWithRedirect as _signInWithRedirect,
+  getRedirectResult as _getRedirectResult,
   createUserWithEmailAndPassword as _createUserWithEmailAndPassword,
   updateProfile as _updateProfile,
   signOut as _signOut,
@@ -123,8 +125,36 @@ export async function firebaseSignInWithEmail(
   return _signInWithEmailAndPassword(getFirebaseAuth(), email, password);
 }
 
+function isRedirectFallbackError(err: unknown): boolean {
+  const code =
+    err && typeof err === "object" && "code" in err
+      ? String((err as { code?: string }).code)
+      : "";
+  return (
+    code === "auth/popup-blocked" ||
+    code === "auth/cancelled-popup-request" ||
+    code === "auth/internal-error"
+  );
+}
+
+/** Popup primeiro; redirecionamento se popup bloqueado ou iframe OAuth falhar. */
 export async function firebaseSignInWithGoogle(): Promise<UserCredential> {
-  return _signInWithPopup(getFirebaseAuth(), getGoogleProvider());
+  const auth = getFirebaseAuth();
+  const provider = getGoogleProvider();
+  try {
+    return await _signInWithPopup(auth, provider);
+  } catch (err) {
+    if (isRedirectFallbackError(err)) {
+      await _signInWithRedirect(auth, provider);
+      throw new Error("REDIRECT_IN_PROGRESS");
+    }
+    throw err;
+  }
+}
+
+/** Completa login Google após `signInWithRedirect` (chamar no mount da página de auth). */
+export async function firebaseCompleteGoogleRedirect(): Promise<UserCredential | null> {
+  return _getRedirectResult(getFirebaseAuth());
 }
 
 export async function firebaseCreateUser(

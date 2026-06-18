@@ -9,17 +9,31 @@ import {
   firebaseSignInWithEmail,
   firebaseSignInWithGoogle,
 } from "@/lib/firebase-client";
+import { useGoogleRedirectCompletion } from "@/lib/use-google-redirect-auth";
+import { AuthErrorHint } from "@/components/features/auth/auth-error-hint";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
+
+  useGoogleRedirectCompletion({
+    onError: (msg) => {
+      setError(msg);
+    },
+    onPendingChange: setPending,
+    afterSession: () => {
+      router.push("/dashboard");
+    },
+  });
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setLastError(null);
     setPending(true);
     const form = e.currentTarget;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
@@ -36,6 +50,7 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
+      setLastError(err);
       if (process.env.NODE_ENV === "development") {
         console.warn("[login]", step, err);
       }
@@ -47,7 +62,9 @@ export default function LoginPage() {
 
   async function onGoogle() {
     setError(null);
+    setLastError(null);
     setPending(true);
+    let redirecting = false;
     let step = "init";
     try {
       step = "popup";
@@ -59,12 +76,15 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
+      setLastError(err);
       if (process.env.NODE_ENV === "development") {
         console.warn("[login:google]", step, err);
       }
-      setError(messageForAuthFlowError(err, { step }));
+      const msg = messageForAuthFlowError(err, { step });
+      setError(msg);
+      if (msg.includes("Redirecionando")) redirecting = true;
     } finally {
-      setPending(false);
+      if (!redirecting) setPending(false);
     }
   }
 
@@ -105,9 +125,7 @@ export default function LoginPage() {
           required
         />
 
-        {error && (
-          <p className="text-sm text-red-600 text-center">{error}</p>
-        )}
+        <AuthErrorHint error={error} lastError={lastError} />
 
         <Button type="submit" loading={pending} className="w-full mt-2">
           Entrar

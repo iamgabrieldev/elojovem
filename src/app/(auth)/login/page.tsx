@@ -20,13 +20,19 @@ export default function LoginPage() {
   const [lastError, setLastError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
 
+  // 1. Atualize o hook do Google Redirect no topo do componente:
   useGoogleRedirectCompletion({
     onError: (msg) => {
       setError(msg);
     },
     onPendingChange: setPending,
-    afterSession: () => {
-      router.push("/dashboard");
+    afterSession: (requiresPaymentCompletion) => {
+      // Redireciona de acordo com o status
+      if (requiresPaymentCompletion) {
+        router.push("/registro/pagamento");
+      } else {
+        router.push("/dashboard");
+      }
     },
   });
 
@@ -46,8 +52,13 @@ export default function LoginPage() {
       step = "idToken";
       const idToken = await cred.user.getIdToken();
       step = "establishServerSession";
-      await establishServerSession(idToken);
-      router.push("/dashboard");
+      const session = await establishServerSession(idToken);
+    
+      if (session.requiresPaymentCompletion) {
+        router.push("/registro/pagamento");
+      } else {
+        router.push("/dashboard");
+      }
       router.refresh();
     } catch (err) {
       setLastError(err);
@@ -72,8 +83,12 @@ export default function LoginPage() {
       step = "idToken";
       const idToken = await cred.user.getIdToken();
       step = "establishServerSession";
-      await establishServerSession(idToken);
-      router.push("/dashboard");
+      const session = await establishServerSession(idToken);
+      if (session.requiresPaymentCompletion) {
+        router.push("/registro/pagamento");
+      } else {
+        router.push("/dashboard");
+      }
       router.refresh();
     } catch (err) {
       setLastError(err);

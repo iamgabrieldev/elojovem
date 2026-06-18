@@ -79,7 +79,9 @@ export async function POST(request: Request) {
         updatedAt: FieldValue.serverTimestamp(),
       };
 
-      if (body.registrationKind === "paid-email" && settings.registrationPaymentEnabled) {
+      // NOVA REGRA: Se o pagamento está ativado nas configurações e o usuário NÃO é admin, 
+      // todos os novos cadastros (Google ou Email) nascem com a pendência de pagamento.
+      if (settings.registrationPaymentEnabled && !isAdmin) {
         await userRef.set({
           ...base,
           requiresPaymentCompletion: true,

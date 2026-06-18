@@ -3,9 +3,11 @@ const isProd = process.env.NODE_ENV === "production";
 
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // CORREÇÃO 1: Adicionado os domínios do Google no script-src para o Firebase Auth funcionar
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.google.com https://*.gstatic.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://api.dicebear.com",
+  // CORREÇÃO Opcional: Adicionado googleusercontent.com para carregar a foto de perfil do Google depois do login
+  "img-src 'self' data: blob: https://api.dicebear.com https://*.googleusercontent.com",
   "font-src 'self' data:",
   [
     "connect-src 'self'",
@@ -84,12 +86,16 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(self)",
           },
+          // CORREÇÃO 2: O Header de Popups do COOP deve ficar AQUI DENTRO, na rota raiz (/:path*)
+          { 
+            key: "Cross-Origin-Opener-Policy", 
+            value: "same-origin-allow-popups" 
+          },
           ...(isProd
             ? [
                 {
                   key: "Strict-Transport-Security",
-                  value:
-                    "max-age=63072000; includeSubDomains; preload",
+                  value: "max-age=63072000; includeSubDomains; preload",
                 },
               ]
             : []),

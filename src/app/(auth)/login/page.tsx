@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Mail, Lock } from "lucide-react";
 import { establishServerSession } from "@/lib/auth-client";
 import { messageForAuthFlowError } from "@/lib/firebase-auth-messages";
 import {
@@ -13,6 +14,7 @@ import { useGoogleRedirectCompletion } from "@/lib/use-google-redirect-auth";
 import { AuthErrorHint } from "@/components/features/auth/auth-error-hint";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GoogleIconButton } from "@/components/ui/google-icon-button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,14 +22,12 @@ export default function LoginPage() {
   const [lastError, setLastError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
 
-  // 1. Atualize o hook do Google Redirect no topo do componente:
   useGoogleRedirectCompletion({
     onError: (msg) => {
       setError(msg);
     },
     onPendingChange: setPending,
     afterSession: (requiresPaymentCompletion) => {
-      // Redireciona de acordo com o status
       if (requiresPaymentCompletion) {
         router.push("/registro/pagamento");
       } else {
@@ -105,24 +105,30 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Entrar</h1>
-        <p className="mt-1 text-sm text-slate-500">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-slate-900">Entrar</h1>
+        <p className="text-sm text-slate-600">
           Bem-vindo de volta ao Elo Jovem
         </p>
       </div>
 
-      <Button
+      <GoogleIconButton
         type="button"
-        variant="secondary"
         className="w-full"
         loading={pending}
         onClick={onGoogle}
       >
         Continuar com Google
-      </Button>
+      </GoogleIconButton>
 
-      <p className="text-center text-xs text-slate-400">ou com email</p>
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-200"></div>
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-[hsl(var(--bg))] px-2 text-slate-500">ou</span>
+        </div>
+      </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Input
@@ -130,6 +136,7 @@ export default function LoginPage() {
           name="email"
           type="email"
           placeholder="seu@email.com"
+          icon={<Mail className="w-4 h-4" />}
           required
         />
         <Input
@@ -137,21 +144,22 @@ export default function LoginPage() {
           name="password"
           type="password"
           placeholder="••••••"
+          icon={<Lock className="w-4 h-4" />}
           required
         />
 
         <AuthErrorHint error={error} lastError={lastError} />
 
-        <Button type="submit" loading={pending} className="w-full mt-2">
-          Entrar
+        <Button type="submit" loading={pending} className="w-full mt-2 h-11 text-base font-semibold">
+          Entrar na conta
         </Button>
       </form>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center text-sm text-slate-600">
         Não tem conta?{" "}
         <Link
           href="/registro"
-          className="font-medium text-amber-600 hover:underline"
+          className="font-semibold text-amber-600 hover:text-amber-700 transition-colors"
         >
           Criar conta
         </Link>

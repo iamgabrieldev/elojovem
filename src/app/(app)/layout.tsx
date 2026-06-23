@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { assertRegistrationPaymentDone } from "@/lib/payment-gate";
 import { PageTransition } from "@/components/ui/page-transition";
 import { getUserProfile } from "@/lib/firestore/repos";
+import { UserProvider } from "@/components/providers/user-provider";
 
 export default async function AppLayout({
   children,
@@ -22,11 +23,13 @@ export default async function AppLayout({
   await assertRegistrationPaymentDone(user);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[hsl(var(--bg))] pb-20">
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 py-6">
-        <PageTransition>{children}</PageTransition>
-      </main>
-      <BottomNav />
-    </div>
+    <UserProvider initialUser={user}>
+      <div className="flex min-h-screen flex-col bg-[hsl(var(--bg))] pb-20">
+        <main className="mx-auto w-full max-w-lg flex-1 px-4 py-6">
+          <PageTransition>{children}</PageTransition>
+        </main>
+        <BottomNav />
+      </div>
+    </UserProvider>
   );
 }

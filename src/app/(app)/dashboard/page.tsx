@@ -25,6 +25,7 @@ import {
   getUserProfile,
 } from "@/lib/firestore/repos";
 import { getQuizAttempt, getQuizStreak } from "@/lib/firestore/quiz-repos";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -82,23 +83,67 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <GreetingCard name={user.name} streak={streak} />
-      <ComicOfDayCard tradition={user.tradition} date={new Date()} />
-      {saint ? <SaintCard saint={saint} /> : null}
-      {psalm ? <PsalmOfDayCard psalm={psalm} /> : null}
-      <DevotionalCard
-        verse={devotional?.verse}
-        verseReference={devotional?.verseReference}
-      />
-      <BibleCtaCard />
-      <HabitChecklist completed={completedHabits} />
-      <QuizHubCard streak={quizStreak} completedToday={Boolean(quizAttempt)} />
-      <CuratedMediaSection tradition={user.tradition} />
+      <ErrorBoundary>
+        <GreetingCard name={user.name} streak={streak} />
+      </ErrorBoundary>
+      
+      <ErrorBoundary>
+        <ComicOfDayCard tradition={user.tradition} date={new Date()} />
+      </ErrorBoundary>
+      
+      {saint && (
+        <ErrorBoundary>
+          <SaintCard saint={saint} />
+        </ErrorBoundary>
+      )}
+      
+      {psalm && (
+        <ErrorBoundary>
+          <PsalmOfDayCard psalm={psalm} />
+        </ErrorBoundary>
+      )}
+      
+      <ErrorBoundary>
+        <DevotionalCard
+          verse={devotional?.verse}
+          verseReference={devotional?.verseReference}
+        />
+      </ErrorBoundary>
+      
+      <ErrorBoundary>
+        <BibleCtaCard />
+      </ErrorBoundary>
+      
+      <ErrorBoundary>
+        <HabitChecklist completed={completedHabits} />
+      </ErrorBoundary>
+      
+      <ErrorBoundary>
+        <QuizHubCard streak={quizStreak} completedToday={Boolean(quizAttempt)} />
+      </ErrorBoundary>
+      
+      <ErrorBoundary>
+        <CuratedMediaSection tradition={user.tradition} />
+      </ErrorBoundary>
+      
       <div className="grid grid-cols-1 gap-3">
-        <ChurchesCta />
-        {user.tradition === "CATHOLIC" ? <RosaryCta /> : null}
-        <MentorCta />
-        <PrayersCta />
+        <ErrorBoundary>
+          <ChurchesCta />
+        </ErrorBoundary>
+        
+        {user.tradition === "CATHOLIC" && (
+          <ErrorBoundary>
+            <RosaryCta />
+          </ErrorBoundary>
+        )}
+        
+        <ErrorBoundary>
+          <MentorCta />
+        </ErrorBoundary>
+        
+        <ErrorBoundary>
+          <PrayersCta />
+        </ErrorBoundary>
       </div>
     </div>
   );

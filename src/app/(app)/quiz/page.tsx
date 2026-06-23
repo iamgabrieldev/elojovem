@@ -13,6 +13,9 @@ import { dateKey } from "@/lib/firestore/repos";
 import { todayDateOnly } from "@/lib/utils";
 import { ensureTodayQuiz } from "@/modules/quiz/ensure-today";
 
+// ISR: Revalidar a cada 30 minutos
+export const revalidate = 1800;
+
 export default async function QuizPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");

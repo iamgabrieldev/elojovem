@@ -4,6 +4,9 @@ import { DevotionalView } from "@/components/features/devotional/devotional-view
 import { ensureTodayDevotional } from "@/modules/devotional/ensure-today";
 import { getUserDevotionalState, getUserProfile } from "@/lib/firestore/repos";
 
+// ISR: Revalidar a cada 1 hora (dados mudam 1x por dia)
+export const revalidate = 3600;
+
 export default async function DevocionalPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");

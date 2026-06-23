@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { fetchBibleBooks } from "@/lib/bible/api";
 import { DEFAULT_BIBLE_VERSION } from "@/lib/bible/constants";
 
+// ISR: Revalidar a cada 24 horas (livros raramente mudam)
+export const revalidate = 86400;
+
 export default async function BibliaIndexPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");

@@ -19,7 +19,7 @@ const quizJsonSchema = z.object({
 function buildPrompt(isoDate: string, gospelContext?: string) {
   const lines = [
     `Gere o quiz bíblico do dia (${isoDate}) com exatamente 5 perguntas de múltipla escolha.`,
-    "Público: jovens cristãos (católicos e protestantes). Idioma: português do Brasil.",
+    "Público: jovens cristãos católicos. Idioma: português do Brasil.",
     "",
     "Responda ESTRITAMENTE com um único objeto JSON (sem markdown, sem texto extra) com a chave:",
     '{"questions": [ ... 5 objetos ... ]}',

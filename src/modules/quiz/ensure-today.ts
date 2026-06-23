@@ -4,24 +4,10 @@ import { getQuiz, upsertQuizRecord } from "@/lib/firestore/quiz-repos";
 import { buildFallbackQuiz } from "./fallback";
 import { generateAndSaveQuiz } from "./generate";
 
-function buildGospelContext(today: Date): Promise<string> {
-  return Promise.all([
-    getDevotional("CATHOLIC", today),
-    getDevotional("PROTESTANT", today),
-  ]).then(([cath, prot]) => {
-    const parts: string[] = [];
-    if (cath) {
-      parts.push(
-        `Tradição católica — referência: ${cath.verseReference}. Trecho: ${cath.verse.slice(0, 280)}`
-      );
-    }
-    if (prot) {
-      parts.push(
-        `Tradição protestante — referência: ${prot.verseReference}. Trecho: ${prot.verse.slice(0, 280)}`
-      );
-    }
-    return parts.join("\n");
-  });
+async function buildGospelContext(today: Date): Promise<string> {
+  const cath = await getDevotional("CATHOLIC", today);
+  if (!cath) return "";
+  return `Tradição católica — referência: ${cath.verseReference}. Trecho: ${cath.verse.slice(0, 280)}`;
 }
 
 export async function ensureTodayQuiz(today: Date) {

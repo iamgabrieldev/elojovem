@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     streak,
   });
 
-  const systemPrompt = buildSystemPrompt(user.tradition, user.goals);
+  const systemPrompt = buildSystemPrompt(user.goals);
   const userPrompt = buildUserPrompt(message, streak, user.goals);
   const combinedPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
 

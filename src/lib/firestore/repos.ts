@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   FieldValue,
   Timestamp,
@@ -93,7 +94,7 @@ function communityCommentFromDoc(
   };
 }
 
-export async function getUserProfile(
+export const getUserProfile = cache(async function getUserProfile(
   uid: string
 ): Promise<UserProfile | null> {
   const snap = await getAdminDb().collection("users").doc(uid).get();
@@ -106,7 +107,7 @@ export async function getUserProfile(
     name: d.name ?? null,
     image: d.image ?? null,
     isAdmin: Boolean(d.isAdmin) || isAdminEmail(email),
-    tradition: (d.tradition as Tradition) ?? null,
+    tradition: d.tradition === "CATHOLIC" ? "CATHOLIC" : null,
     dailyTime: typeof d.dailyTime === "number" ? d.dailyTime : 10,
     goals: Array.isArray(d.goals) ? (d.goals as GoalType[]) : [],
     onboardingCompleted: Boolean(d.onboardingCompleted),
@@ -122,7 +123,7 @@ export async function getUserProfile(
     createdAt: tsToDate(d.createdAt),
     updatedAt: tsToDate(d.updatedAt),
   };
-}
+});
 
 export async function getAppSettings(): Promise<AppSettings> {
   const snap = await getAdminDb().collection("appSettings").doc("global").get();

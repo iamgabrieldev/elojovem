@@ -20,19 +20,14 @@ const devotionalJsonSchema = z.object({
 
 export type GeneratedDevotionalPayload = z.infer<typeof devotionalJsonSchema>;
 
-function buildPrompt(tradition: Tradition, isoDate: string) {
-  const label =
-    tradition === "CATHOLIC"
-      ? "tradição católica (Igreja Católica Apostólica Romana)"
-      : "tradição protestante/evangélica";
-
+function buildPrompt(isoDate: string) {
   return [
-    `Gere o devocional do dia (${isoDate}) para um jovem cristão na ${label}.`,
+    `Gere o devocional do dia (${isoDate}) para um jovem cristão na tradição católica (Igreja Católica Apostólica Romana).`,
     "",
     "Responda ESTRITAMENTE com um único objeto JSON (sem markdown, sem texto extra) com as chaves:",
     '{"summary","reflection","prayer","action","keyVerse","keyVerseReference","promise","promiseReference"}',
     "",
-    "- summary: parágrafo introdório convidando à reflexão (3-5 frases).",
+    "- summary: parágrafo introdutório convidando à reflexão (3-5 frases).",
     "- reflection: texto de reflexão espiritual substantivo.",
     "- prayer: oração em primeira pessoa do plural ou singular, entre aspas ou texto corrido.",
     "- action: passo prático concreto para hoje.",
@@ -45,12 +40,10 @@ function buildPrompt(tradition: Tradition, isoDate: string) {
 
 export async function generateAndSaveDevotional(tradition: Tradition, date: Date) {
   const iso = date.toISOString().slice(0, 10);
-  const prompt = buildPrompt(tradition, iso);
+  const prompt = buildPrompt(iso);
 
   const result = await devotionalAgent.generate(prompt, {
-    structuredOutput: {
-      schema: devotionalJsonSchema,
-    },
+    structuredOutput: { schema: devotionalJsonSchema },
   });
 
   if (result.error) {

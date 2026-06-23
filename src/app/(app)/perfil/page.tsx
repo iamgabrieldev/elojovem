@@ -74,7 +74,7 @@ export default async function PerfilPage() {
           <div className="mt-1">
             {user.tradition ? (
               <Badge variant="warning">
-                {user.tradition === "CATHOLIC" ? "Católica" : "Protestante"}
+                Católica Apostólica Romana
               </Badge>
             ) : (
               <Link

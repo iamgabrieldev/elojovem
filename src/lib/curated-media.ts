@@ -5,9 +5,7 @@ export type CuratedItem = {
   title: string;
   subtitle: string;
   href: string;
-  /** "youtube" | "site" | "audio" */
   kind: "youtube" | "site" | "audio";
-  /** Quem vê: mesma tradição ou todos */
   forTradition: Tradition | "ALL";
 };
 
@@ -35,22 +33,6 @@ const ITEMS: CuratedItem[] = [
     href: "https://www.vaticannews.va/pt.html",
     kind: "site",
     forTradition: "CATHOLIC",
-  },
-  {
-    id: "bible-project",
-    title: "The Bible Project",
-    subtitle: "Vídeos que explicam os livros da Bíblia (inglês; legendas)",
-    href: "https://www.youtube.com/@bibleproject",
-    kind: "youtube",
-    forTradition: "PROTESTANT",
-  },
-  {
-    id: "hillsong-pt",
-    title: "Hillsong em Português",
-    subtitle: "Canal no YouTube — louvor",
-    href: "https://www.youtube.com/@HillsongEmPortugues",
-    kind: "youtube",
-    forTradition: "PROTESTANT",
   },
   {
     id: "jesuscopy",

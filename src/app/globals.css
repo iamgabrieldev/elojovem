@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Enable Tailwind dark: prefix for both system preference and manual [data-theme="dark"] */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:not([data-theme="light"], [data-theme="light"] *) {
+      @slot;
+    }
+  }
+  &:is([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+}
+
 @keyframes typing-dot {
   0%,
   80%,
@@ -13,57 +25,69 @@
   }
 }
 
+/* ─── Light theme (default) ──────────────────────────────────── */
 :root {
-  /* Brand (quente e acolhedor) */
-  --brand: 38 92% 50%; /* âmbar */
+  --brand: 38 92% 50%;
   --brand-foreground: 0 0% 100%;
 
-  /* Base */
   --bg: 36 33% 98%;
-  --fg: 222 47% 11%; /* azul bem escuro */
-  --muted: 215 16% 47%;
+  --fg: 222 47% 11%;
+  --muted: 215 20% 40%;       /* WCAG AA on --bg */
   --card: 0 0% 100%;
-  --border: 220 13% 91%;
+  --border: 220 13% 88%;
   --ring: 38 92% 50%;
   --elev: 0 0% 100%;
 
-  /* Estados */
-  --success: 142 70% 40%;
-  --warning: 38 92% 50%;
-  --danger: 0 72% 51%;
+  --success: 142 70% 32%;
+  --warning: 38 92% 42%;
+  --danger: 0 72% 44%;
 }
 
+/* ─── Dark theme — system preference ─────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: 222 36% 9%;
-    --fg: 210 40% 98%;
-    --muted: 214 20% 76%;
-    --card: 222 30% 14%;
-    --border: 218 19% 26%;
-    --ring: 38 92% 56%;
-    --elev: 222 30% 17%;
+    --bg: 222 36% 8%;
+    --fg: 210 40% 97%;         /* #f5f8fc — AAA on --bg */
+    --muted: 214 22% 68%;      /* WCAG AA on --card */
+    --card: 222 30% 13%;
+    --border: 218 20% 24%;
+    --ring: 38 95% 60%;
+    --elev: 222 28% 16%;
+
+    --success: 142 76% 54%;
+    --warning: 38 95% 62%;
+    --danger: 0 85% 66%;
   }
 }
 
-/* Tema manual (via data-theme no <html>). */
+/* ─── Dark theme — manual override ───────────────────────────── */
+html[data-theme="dark"] {
+  --bg: 222 36% 8%;
+  --fg: 210 40% 97%;
+  --muted: 214 22% 68%;
+  --card: 222 30% 13%;
+  --border: 218 20% 24%;
+  --ring: 38 95% 60%;
+  --elev: 222 28% 16%;
+
+  --success: 142 76% 54%;
+  --warning: 38 95% 62%;
+  --danger: 0 85% 66%;
+}
+
+/* ─── Light theme — manual override ──────────────────────────── */
 html[data-theme="light"] {
   --bg: 36 33% 98%;
   --fg: 222 47% 11%;
-  --muted: 215 16% 47%;
+  --muted: 215 20% 40%;
   --card: 0 0% 100%;
-  --border: 220 13% 91%;
+  --border: 220 13% 88%;
   --ring: 38 92% 50%;
   --elev: 0 0% 100%;
-}
 
-html[data-theme="dark"] {
-  --bg: 222 36% 9%;
-  --fg: 210 40% 98%;
-  --muted: 214 20% 76%;
-  --card: 222 30% 14%;
-  --border: 218 19% 26%;
-  --ring: 38 92% 56%;
-  --elev: 222 30% 17%;
+  --success: 142 70% 32%;
+  --warning: 38 92% 42%;
+  --danger: 0 72% 44%;
 }
 
 html {

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { z } from "zod";
 
 const ReadingSchema = z.object({
@@ -61,7 +62,7 @@ function withTimeout(signal: AbortSignal | undefined, timeoutMs: number) {
   };
 }
 
-export async function fetchDailyLiturgy(
+async function _fetchDailyLiturgy(
   date: Date,
   opts?: { signal?: AbortSignal; timeoutMs?: number },
 ): Promise<DailyLiturgy> {
@@ -83,13 +84,20 @@ export async function fetchDailyLiturgy(
     const json = (await res.json()) as unknown;
     const parsed = DailyLiturgySchema.parse(json);
 
-    // Hoje a API v2 retorna o dia atual do servidor dela.
-    // Mantemos `date` no contrato para futura rota por data e para logging.
     void date;
 
     return parsed;
   } finally {
     t.clear();
   }
+}
+
+export function fetchDailyLiturgy(date: Date): Promise<DailyLiturgy> {
+  const dateKey = date.toISOString().slice(0, 10);
+  return unstable_cache(
+    () => _fetchDailyLiturgy(date),
+    ["daily-liturgy", dateKey],
+    { revalidate: 3600, tags: ["liturgy"] }
+  )();
 }
 

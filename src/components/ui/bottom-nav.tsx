@@ -7,7 +7,6 @@ import {
   BookOpen,
   BookMarked,
   User,
-  MapPin,
   Trophy,
   BookOpenCheck,
 } from "lucide-react";
@@ -21,7 +20,6 @@ export function BottomNav() {
     { href: "/devocional", label: "Devocional", icon: BookOpen },
     { href: "/quiz", label: "Quiz", icon: BookOpenCheck },
     { href: "/biblia", label: "Bíblia", icon: BookMarked },
-    { href: "/igrejas", label: "Igrejas", icon: MapPin },
     { href: "/ranking", label: "Ranking", icon: Trophy },
     { href: "/perfil", label: "Perfil", icon: User },
   ] as const;
@@ -39,6 +37,7 @@ export function BottomNav() {
               <Link
                 key={href}
                 href={href}
+                prefetch={true}
                 className={cn(
                   "flex min-w-[56px] flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-medium transition-all sm:min-w-[64px] sm:text-[11px]",
                   active

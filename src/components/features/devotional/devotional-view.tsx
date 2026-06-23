@@ -27,12 +27,8 @@ export function DevotionalView({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Badge
-          variant={devotional.tradition === "CATHOLIC" ? "warning" : "default"}
-        >
-          {devotional.tradition === "CATHOLIC" ? "Católico" : "Protestante"}
-        </Badge>
-        <h1 className="mt-2 text-xl font-bold text-slate-900">
+        <Badge variant="warning">Católico Apostólico Romano</Badge>
+        <h1 className="mt-2 text-xl font-bold text-[hsl(var(--fg))]">
           Devocional do dia
         </h1>
       </div>

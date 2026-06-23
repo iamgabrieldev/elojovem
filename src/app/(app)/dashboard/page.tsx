@@ -8,7 +8,6 @@ import { DevotionalCard } from "@/components/features/dashboard/devotional-card"
 import { HabitChecklist } from "@/components/features/dashboard/habit-checklist";
 import { MentorCta } from "@/components/features/dashboard/mentor-cta";
 import { PrayersCta } from "@/components/features/dashboard/prayers-cta";
-import { ChurchesCta } from "@/components/features/dashboard/churches-cta";
 import { RosaryCta } from "@/components/features/dashboard/rosary-cta";
 import { SaintCard } from "@/components/features/dashboard/saint-card";
 import { BibleCtaCard } from "@/components/features/dashboard/bible-cta-card";
@@ -32,30 +31,32 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect("/login");
 
   const user = await getUserProfile(session.user.id);
-
   if (!user) redirect("/login");
   if (!user.onboardingCompleted) redirect("/tradicao");
 
   const today = todayDateOnly();
 
-  let devotional = null;
-  if (user.tradition) {
-    try {
-      devotional = (await ensureTodayDevotional(user.tradition)).devotional;
-    } catch {
-      devotional = null;
-    }
-  }
+  const [devotionalResult, saint, liturgy, todayHabits, streak, quizAttempt] =
+    await Promise.allSettled([
+      user.tradition ? ensureTodayDevotional(user.tradition) : Promise.resolve(null),
+      getSaintOfDay(today),
+      fetchDailyLiturgy(today),
+      getHabitLogsForDate(user.id, today),
+      calculateStreak(user.id),
+      getQuizAttempt(user.id, dateKey(today)),
+    ]);
 
-  const saint =
-    user.tradition === "CATHOLIC"
-      ? await getSaintOfDay(today).catch(() => null)
+  const devotional =
+    devotionalResult.status === "fulfilled" && devotionalResult.value
+      ? devotionalResult.value.devotional
       : null;
 
+  const saintData =
+    saint.status === "fulfilled" ? saint.value : null;
+
   let psalm: { reference: string; refrain: string; text: string } | null = null;
-  try {
-    const liturgy = await fetchDailyLiturgy(today);
-    const todayPsalm = liturgy.leituras.salmo?.[0];
+  if (liturgy.status === "fulfilled") {
+    const todayPsalm = liturgy.value.leituras.salmo?.[0];
     if (todayPsalm?.texto) {
       psalm = {
         reference: todayPsalm.referencia,
@@ -63,84 +64,74 @@ export default async function DashboardPage() {
         text: todayPsalm.texto,
       };
     }
-  } catch {
-    psalm = null;
   }
 
-  const dk = dateKey(today);
+  const habitsData =
+    todayHabits.status === "fulfilled" ? todayHabits.value : [];
+  const streakData = streak.status === "fulfilled" ? streak.value : 0;
+  const quizAttemptData =
+    quizAttempt.status === "fulfilled" ? quizAttempt.value : null;
 
-  const [todayHabits, streak, quizAttempt] = await Promise.all([
-    getHabitLogsForDate(user.id, today),
-    calculateStreak(user.id),
-    getQuizAttempt(user.id, dk),
-  ]);
-
-  const quizStreak = quizAttempt
-    ? await getQuizStreak(user.id, dk)
+  const quizStreak = quizAttemptData
+    ? await getQuizStreak(user.id, dateKey(today)).catch(() => 0)
     : 0;
 
-  const completedHabits: HabitType[] = todayHabits.map((h) => h.habitType);
+  const completedHabits: HabitType[] = habitsData.map((h) => h.habitType);
 
   return (
     <div className="flex flex-col gap-6">
       <ErrorBoundary>
-        <GreetingCard name={user.name} streak={streak} />
+        <GreetingCard name={user.name} streak={streakData} />
       </ErrorBoundary>
-      
+
       <ErrorBoundary>
-        <ComicOfDayCard tradition={user.tradition} date={new Date()} />
+        <ComicOfDayCard date={new Date()} />
       </ErrorBoundary>
-      
-      {saint && (
+
+      {saintData && (
         <ErrorBoundary>
-          <SaintCard saint={saint} />
+          <SaintCard saint={saintData} />
         </ErrorBoundary>
       )}
-      
+
       {psalm && (
         <ErrorBoundary>
           <PsalmOfDayCard psalm={psalm} />
         </ErrorBoundary>
       )}
-      
+
       <ErrorBoundary>
         <DevotionalCard
           verse={devotional?.verse}
           verseReference={devotional?.verseReference}
         />
       </ErrorBoundary>
-      
+
       <ErrorBoundary>
         <BibleCtaCard />
       </ErrorBoundary>
-      
+
       <ErrorBoundary>
         <HabitChecklist completed={completedHabits} />
       </ErrorBoundary>
-      
+
       <ErrorBoundary>
-        <QuizHubCard streak={quizStreak} completedToday={Boolean(quizAttempt)} />
+        <QuizHubCard streak={quizStreak} completedToday={Boolean(quizAttemptData)} />
       </ErrorBoundary>
-      
+
       <ErrorBoundary>
         <CuratedMediaSection tradition={user.tradition} />
       </ErrorBoundary>
-      
+
       <div className="grid grid-cols-1 gap-3">
         <ErrorBoundary>
-          <ChurchesCta />
+          <RosaryCta />
         </ErrorBoundary>
-        
-        {user.tradition === "CATHOLIC" && (
-          <ErrorBoundary>
-            <RosaryCta />
-          </ErrorBoundary>
-        )}
-        
+
         <ErrorBoundary>
           <MentorCta />
         </ErrorBoundary>
-        
+
         <ErrorBoundary>
           <PrayersCta />
         </ErrorBoundary>

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { devotionalAgent } from "@/mastra/agents/devotional-agent";
 
@@ -10,7 +11,7 @@ const SaintSchema = z.object({
 
 export type SaintOfDay = z.infer<typeof SaintSchema>;
 
-export async function getSaintOfDay(date = new Date()): Promise<SaintOfDay> {
+async function fetchSaintOfDay(date: Date): Promise<SaintOfDay> {
   const d = date.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -29,3 +30,11 @@ export async function getSaintOfDay(date = new Date()): Promise<SaintOfDay> {
   return SaintSchema.parse(json);
 }
 
+export function getSaintOfDay(date = new Date()): Promise<SaintOfDay> {
+  const dateKey = date.toISOString().slice(0, 10);
+  return unstable_cache(
+    () => fetchSaintOfDay(date),
+    ["saint-of-day", dateKey],
+    { revalidate: 86400, tags: ["saint"] }
+  )();
+}

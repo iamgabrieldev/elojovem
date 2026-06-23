@@ -3,10 +3,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { GoalType, Tradition } from "@/lib/types/domain";
+import type { GoalType } from "@/lib/types/domain";
 import { updateUser } from "@/lib/firestore/repos";
-
-const traditionSchema = z.enum(["CATHOLIC", "PROTESTANT"]);
 
 const goalsSchema = z
   .array(
@@ -20,19 +18,11 @@ const dailyTimeSchema = z.coerce
   .min(5, "Mínimo 5 minutos")
   .max(120, "Máximo 120 minutos");
 
-export async function setTradition(tradition: Tradition) {
+export async function setTradition() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const parsed = traditionSchema.safeParse(tradition);
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Tradição inválida");
-  }
-
-  await updateUser(session.user.id, {
-    tradition: parsed.data,
-  });
-
+  await updateUser(session.user.id, { tradition: "CATHOLIC" });
   redirect("/objetivos");
 }
 
@@ -45,10 +35,7 @@ export async function setGoals(goals: GoalType[]) {
     throw new Error(parsed.error.issues[0]?.message ?? "Objetivos inválidos");
   }
 
-  await updateUser(session.user.id, {
-    goals: parsed.data,
-  });
-
+  await updateUser(session.user.id, { goals: parsed.data });
   redirect("/tempo");
 }
 

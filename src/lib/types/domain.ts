@@ -1,4 +1,4 @@
-export type Tradition = "CATHOLIC" | "PROTESTANT";
+export type Tradition = "CATHOLIC";
 
 /** Plano de assinatura escolhido no checkout (persistido após iniciar pagamento). */
 export type SubscriptionPlanId = "MONTHLY" | "ANNUAL";
